@@ -1,0 +1,164 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Roboto', sans-serif;
+    background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+    color: white;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.container {
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 15px;
+    padding: 30px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    text-align: center;
+}
+
+h1 {
+    margin-bottom: 20px;
+    font-weight: 700;
+    font-size: 2.2rem;
+}
+
+.timer-display {
+    margin: 30px 0;
+}
+
+.time {
+    font-size: 4rem;
+    font-weight: 300;
+    margin-bottom: 10px;
+}
+
+.progress-container {
+    width: 100%;
+    height: 10px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 100%;
+    background-color: #4CAF50;
+    transition: width 0.1s linear;
+}
+
+.exercise-info {
+    margin: 30px 0;
+    min-height: 120px;
+}
+
+.exercise-info h2 {
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+    color: #fdbb2d;
+}
+
+.exercise-info p {
+    font-size: 1rem;
+    line-height: 1.5;
+    opacity: 0.9;
+}
+
+.controls {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin: 30px 0;
+}
+
+button {
+    padding: 12px 25px;
+    font-size: 1rem;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    background-color: #4CAF50;
+    color: white;
+    font-weight: 700;
+    transition: all 0.3s;
+    min-width: 100px;
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+button:disabled {
+    background-color: #666;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+#pause-btn {
+    background-color: #f39c12;
+}
+
+#reset-btn {
+    background-color: #e74c3c;
+}
+
+.upcoming-exercises {
+    margin-top: 30px;
+    text-align: left;
+}
+
+.upcoming-exercises h3 {
+    margin-bottom: 10px;
+    font-size: 1.2rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 5px;
+}
+
+#exercise-list {
+    list-style-type: none;
+}
+
+#exercise-list li {
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-between;
+}
+
+#exercise-list li.current {
+    color: #fdbb2d;
+    font-weight: bold;
+}
+
+#exercise-list li.next {
+    opacity: 0.8;
+}
+
+#exercise-list li.future {
+    opacity: 0.5;
+}
+
+@media (max-width: 600px) {
+    .container {
+        padding: 20px;
+    }
+    
+    .controls {
+        flex-direction: column;
+    }
+    
+    button {
+        width: 100%;
+    }
+}
