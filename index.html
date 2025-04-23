@@ -1,37 +1,205 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Workout Timer</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Workout Timer</title>
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --accent: #3b82f6;
+      --bg: #f0f4f8;
+      --text: #1f2937;
+      --highlight: #10b981;
+      --danger: #ef4444;
+    }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+    h1 { color: var(--primary); }
+    .exercise { font-size: 2rem; color: var(--accent); min-height: 3rem; }
+    .timer { font-size: 5rem; font-weight: bold; color: var(--highlight); }
+    .controls {
+      display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; margin-top: 1rem;
+    }
+    button {
+      padding: 1rem 2rem; font-size: 1.1rem; border: none; border-radius: 12px;
+      background: var(--primary); color: white; cursor: pointer;
+    }
+    button:hover:not(:disabled) { background: var(--accent); }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .status { margin-top: 2rem; color: var(--danger); }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Workout Timer</h1>
-        <div class="timer-display">
-            <div class="time" id="time">01:00</div>
-            <div class="progress-container">
-                <div class="progress-bar" id="progress-bar"></div>
-            </div>
-        </div>
-        <div class="exercise-info">
-            <h2 id="exercise-name">Pull-ups</h2>
-            <p id="exercise-description">Hang from a bar with arms extended, pull yourself up until your chin passes the bar.</p>
-        </div>
-        <div class="controls">
-            <button id="start-btn">Start</button>
-            <button id="pause-btn" disabled>Pause</button>
-            <button id="reset-btn">Reset</button>
-        </div>
-        <div class="upcoming-exercises">
-            <h3>Upcoming Exercises:</h3>
-            <ul id="exercise-list"></ul>
-        </div>
-    </div>
-    <audio id="beep" src="https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3"></audio>
-    <audio id="end-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-positive-interface-beep-221.mp3"></audio>
-    <script src="script.js"></script>
+  <h1>Workout Timer</h1>
+  <div class="exercise" id="exercise">Ready?</div>
+  <div class="timer" id="timer">10</div>
+  <div class="controls">
+    <button id="prevBtn" onclick="jumpToPrev()">⬅️ Previous</button>
+    <button id="startPauseBtn" onclick="toggleWorkout()">▶️ Start</button>
+    <button id="nextBtn" onclick="jumpToNext()">Next ➡️</button>
+  </div>
+  <div class="status" id="status"></div>
+  <audio id="beep" src="https://cdn.pixabay.com/audio/2022/03/15/audio_c9ef4de978.mp3"></audio>
+
+  <script>
+    const exercises = [
+      "Pull-ups", "Push-ups", "Squats", "Hanging knee raises (abs)", "Diamond push-ups",
+      "Jump squats", "Triceps dips (chair)", "Wide pull-ups", "Push-up hold (bottom)", "Plank"
+    ];
+
+    let currentIndex = 0, timer = null, remainingTime = 10;
+    let inProgress = false, paused = false, mode = "prep";
+
+    const DURATION = 60, REST = 30;
+    const beep = document.getElementById("beep");
+    const startPauseBtn = document.getElementById("startPauseBtn");
+    const prevBtn = document.getElementById("prevBtn");
+    const nextBtn = document.getElementById("nextBtn");
+    const status = document.getElementById("status");
+    const timerDisplay = document.getElementById("timer");
+    const exerciseDisplay = document.getElementById("exercise");
+
+    function updateDisplay(label, time) {
+      exerciseDisplay.textContent = label;
+      timerDisplay.textContent = time > 0 ? time : '';
+      status.textContent = inProgress ? `Phase: ${mode.toUpperCase()} | ${currentIndex + 1}/${exercises.length}` : "";
+      prevBtn.disabled = mode === "prep" || currentIndex === 0;
+      nextBtn.disabled = mode === "prep" || currentIndex >= exercises.length - 1;
+    }
+
+    function countdownBeep(time) {
+      if ([3, 2, 1].includes(time)) {
+        try {
+          beep.pause();
+          beep.currentTime = 0;
+          beep.play();
+        } catch (err) {
+          console.warn("Beep failed:", err);
+        }
+      }
+    }
+
+    function toggleWorkout() {
+      if (!inProgress) {
+        startWorkout();
+      } else {
+        paused = !paused;
+        if (paused) {
+          clearInterval(timer);
+          startPauseBtn.textContent = "▶️ Resume";
+          status.textContent = "Paused";
+        } else {
+          startPauseBtn.textContent = "⏸ Pause";
+          resumeCurrentPhase();
+        }
+      }
+    }
+
+    function startWorkout() {
+      inProgress = true;
+      paused = false;
+      currentIndex = 0;
+      mode = "prep";
+      remainingTime = 10;
+      startPauseBtn.textContent = "⏸ Pause";
+      tick("Starting in...", () => startExercise());
+    }
+
+    function tick(label, callback) {
+      clearInterval(timer);
+      updateDisplay(label, remainingTime);
+      timer = setInterval(() => {
+        countdownBeep(remainingTime);
+        updateDisplay(label, remainingTime);
+        remainingTime--;
+        if (remainingTime < 0) {
+          clearInterval(timer);
+          callback();
+        }
+      }, 1000);
+    }
+
+    function startExercise() {
+      if (currentIndex >= exercises.length) return endWorkout();
+      mode = "exercise";
+      remainingTime = DURATION;
+      tick(exercises[currentIndex], () => {
+        currentIndex++;
+        if (currentIndex >= exercises.length) {
+          endWorkout();
+        } else {
+          startRest();
+        }
+      });
+    }
+
+    function startRest() {
+      mode = "rest";
+      remainingTime = REST;
+      tick("Rest", startExercise);
+    }
+
+    function resumeCurrentPhase() {
+      if (mode === "exercise") {
+        tick(exercises[currentIndex], () => {
+          currentIndex++;
+          currentIndex >= exercises.length ? endWorkout() : startRest();
+        });
+      } else if (mode === "rest") {
+        tick("Rest", startExercise);
+      }
+    }
+
+    function jumpToPrev() {
+      if (currentIndex > 0) {
+        clearInterval(timer);
+        paused = false;
+        currentIndex--;
+        mode = "exercise";
+        remainingTime = DURATION;
+        startPauseBtn.textContent = "⏸ Pause";
+        startExercise();
+      }
+    }
+
+    function jumpToNext() {
+      clearInterval(timer);
+      paused = false;
+      if (currentIndex < exercises.length - 1) {
+        currentIndex++;
+        mode = "exercise";
+        remainingTime = DURATION;
+        startPauseBtn.textContent = "⏸ Pause";
+        startExercise();
+      } else {
+        endWorkout();
+      }
+    }
+
+    function endWorkout() {
+      inProgress = false;
+      paused = false;
+      clearInterval(timer);
+      updateDisplay("Workout complete!", 0);
+      startPauseBtn.textContent = "🔁 Restart";
+      startPauseBtn.onclick = () => {
+        startPauseBtn.onclick = toggleWorkout;
+        toggleWorkout();
+      };
+    }
+  </script>
 </body>
 </html>
+
