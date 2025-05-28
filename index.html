@@ -1,205 +1,469 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Workout Timer</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bodyweight Workout Timer</title>
   <style>
-    :root {
-      --primary: #1e3a8a;
-      --accent: #3b82f6;
-      --bg: #f0f4f8;
-      --text: #1f2937;
-      --highlight: #10b981;
-      --danger: #ef4444;
-    }
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: var(--bg);
-      color: var(--text);
+    * {
       margin: 0;
-      padding: 2rem;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
+      color: white;
+    }
+
+    .container {
       text-align: center;
+      max-width: 500px;
+      width: 90%;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     }
-    h1 { color: var(--primary); }
-    .exercise { font-size: 2rem; color: var(--accent); min-height: 3rem; }
-    .timer { font-size: 5rem; font-weight: bold; color: var(--highlight); }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 30px;
+      font-weight: 300;
+      letter-spacing: 2px;
+    }
+
+    .timer-display {
+      font-size: 8rem;
+      font-weight: bold;
+      margin: 30px 0;
+      text-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+      transition: all 0.3s ease;
+    }
+
+    .timer-display.warning {
+      color: #ff6b6b;
+      transform: scale(1.1);
+    }
+
+    .exercise-name {
+      font-size: 2rem;
+      margin: 20px 0;
+      font-weight: 500;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .phase-indicator {
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      opacity: 0.8;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      margin: 20px 0;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+      width: 0%;
+      transition: width 1s linear;
+      border-radius: 4px;
+    }
+
     .controls {
-      display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; margin-top: 1rem;
+      margin-top: 30px;
     }
+
     button {
-      padding: 1rem 2rem; font-size: 1.1rem; border: none; border-radius: 12px;
-      background: var(--primary); color: white; cursor: pointer;
+      background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+      border: none;
+      color: white;
+      padding: 15px 30px;
+      margin: 0 10px;
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
     }
-    button:hover:not(:disabled) { background: var(--accent); }
-    button:disabled { background: #ccc; cursor: not-allowed; }
-    .status { margin-top: 2rem; color: var(--danger); }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .workout-list {
+      text-align: left;
+      margin-top: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      padding: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .exercise-item {
+      padding: 8px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .exercise-item:last-child {
+      border-bottom: none;
+    }
+
+    .exercise-item.current {
+      color: #4facfe;
+      font-weight: bold;
+      transform: scale(1.05);
+    }
+
+    .exercise-item.completed {
+      opacity: 0.5;
+      text-decoration: line-through;
+    }
+
+    @media (max-width: 600px) {
+      .timer-display {
+        font-size: 6rem;
+      }
+
+      .exercise-name {
+        font-size: 1.5rem;
+      }
+
+      h1 {
+        font-size: 2rem;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>Workout Timer</h1>
-  <div class="exercise" id="exercise">Ready?</div>
-  <div class="timer" id="timer">10</div>
-  <div class="controls">
-    <button id="prevBtn" onclick="jumpToPrev()">⬅️ Previous</button>
-    <button id="startPauseBtn" onclick="toggleWorkout()">▶️ Start</button>
-    <button id="nextBtn" onclick="jumpToNext()">Next ➡️</button>
+<div class="container">
+  <h1>Bodyweight Workout</h1>
+
+  <div class="phase-indicator" id="phaseIndicator">Ready to Start</div>
+  <div class="timer-display" id="timerDisplay">10:00</div>
+  <div class="exercise-name" id="exerciseName">Get Ready!</div>
+
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill"></div>
   </div>
-  <div class="status" id="status"></div>
-  <audio id="beep" src="https://cdn.pixabay.com/audio/2022/03/15/audio_c9ef4de978.mp3"></audio>
 
-  <script>
-    const exercises = [
-      "Pull-ups", "Push-ups", "Squats", "Hanging knee raises (abs)", "Diamond push-ups",
-      "Jump squats", "Triceps dips (chair)", "Wide pull-ups", "Push-up hold (bottom)", "Plank"
-    ];
+  <div class="controls">
+    <button id="backBtn">⏮️ Back</button>
+    <button id="startBtn">▶️ Start Workout</button>
+    <button id="pauseBtn" disabled>⏸️ Pause</button>
+    <button id="nextBtn">⏭️ Next</button>
+    <button id="resetBtn">🔄 Reset</button>
+  </div>
 
-    let currentIndex = 0, timer = null, remainingTime = 10;
-    let inProgress = false, paused = false, mode = "prep";
 
-    const DURATION = 60, REST = 30;
-    const beep = document.getElementById("beep");
-    const startPauseBtn = document.getElementById("startPauseBtn");
-    const prevBtn = document.getElementById("prevBtn");
-    const nextBtn = document.getElementById("nextBtn");
-    const status = document.getElementById("status");
-    const timerDisplay = document.getElementById("timer");
-    const exerciseDisplay = document.getElementById("exercise");
+  <div class="workout-list" id="workoutList"></div>
+</div>
 
-    function updateDisplay(label, time) {
-      exerciseDisplay.textContent = label;
-      timerDisplay.textContent = time > 0 ? time : '';
-      status.textContent = inProgress ? `Phase: ${mode.toUpperCase()} | ${currentIndex + 1}/${exercises.length}` : "";
-      prevBtn.disabled = mode === "prep" || currentIndex === 0;
-      nextBtn.disabled = mode === "prep" || currentIndex >= exercises.length - 1;
+<script>
+  class WorkoutTimer {
+    playStartExerciseSound() {
+      this.playBeep(1000, 300);
+      setTimeout(() => this.playBeep(1200, 300), 300);
+      setTimeout(() => this.playBeep(1400, 500), 600);
     }
-
-    function countdownBeep(time) {
-      if ([3, 2, 1].includes(time)) {
-        try {
-          beep.pause();
-          beep.currentTime = 0;
-          beep.play();
-        } catch (err) {
-          console.warn("Beep failed:", err);
-        }
+    previousExercise() {
+      if (this.currentExercise > 0) {
+        this.currentExercise--;
+        this.startExercise();
       }
     }
 
-    function toggleWorkout() {
-      if (!inProgress) {
-        startWorkout();
+    skipToNextExercise() {
+      if (this.currentExercise < this.exercises.length - 1) {
+        this.currentExercise++;
+        this.startExercise();
       } else {
-        paused = !paused;
-        if (paused) {
-          clearInterval(timer);
-          startPauseBtn.textContent = "▶️ Resume";
-          status.textContent = "Paused";
-        } else {
-          startPauseBtn.textContent = "⏸ Pause";
-          resumeCurrentPhase();
-        }
+        this.finishWorkout();
       }
     }
 
-    function startWorkout() {
-      inProgress = true;
-      paused = false;
-      currentIndex = 0;
-      mode = "prep";
-      remainingTime = 10;
-      startPauseBtn.textContent = "⏸ Pause";
-      tick("Starting in...", () => startExercise());
+    constructor() {
+      this.exercises = [
+        'Pull-ups',
+        'Push-ups',
+        'Squats',
+        'Hanging knee raises (abs)',
+        'Diamond push-ups',
+        'Jump squats',
+        'Triceps dips (using a chair)',
+        'Wide pull-ups',
+        'Push-up hold (bottom position)',
+        'Plank'
+      ];
+
+      this.currentPhase = 'ready'; // ready, countdown, exercise, rest, finished
+      this.currentExercise = 0;
+      this.timeLeft = 0;
+      this.totalTime = 0;
+      this.timer = null;
+      this.isPaused = false;
+
+      // Audio contexts for different sounds
+      this.audioContext = null;
+      this.initAudio();
+
+      this.initElements();
+      this.setupEventListeners();
+      this.renderWorkoutList();
+      this.updateDisplay();
     }
 
-    function tick(label, callback) {
-      clearInterval(timer);
-      updateDisplay(label, remainingTime);
-      timer = setInterval(() => {
-        countdownBeep(remainingTime);
-        updateDisplay(label, remainingTime);
-        remainingTime--;
-        if (remainingTime < 0) {
-          clearInterval(timer);
-          callback();
-        }
-      }, 1000);
+    initAudio() {
+      try {
+        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      } catch (e) {
+        console.log('Audio not supported');
+      }
     }
 
-    function startExercise() {
-      if (currentIndex >= exercises.length) return endWorkout();
-      mode = "exercise";
-      remainingTime = DURATION;
-      tick(exercises[currentIndex], () => {
-        currentIndex++;
-        if (currentIndex >= exercises.length) {
-          endWorkout();
-        } else {
-          startRest();
+    playBeep(frequency = 800, duration = 200) {
+      if (!this.audioContext) return;
+
+      const oscillator = this.audioContext.createOscillator();
+      const gainNode = this.audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(this.audioContext.destination);
+
+      oscillator.frequency.value = frequency;
+      oscillator.type = 'sine';
+
+      gainNode.gain.setValueAtTime(0.3, this.audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + duration / 1000);
+
+      oscillator.start(this.audioContext.currentTime);
+      oscillator.stop(this.audioContext.currentTime + duration / 1000);
+    }
+
+    playWarningBeeps() {
+      this.playBeep(600, 150);
+      setTimeout(() => this.playBeep(600, 150), 200);
+      setTimeout(() => this.playBeep(600, 150), 400);
+    }
+
+    playFinishSound() {
+      this.playBeep(800, 300);
+      setTimeout(() => this.playBeep(1000, 300), 300);
+      setTimeout(() => this.playBeep(1200, 500), 600);
+    }
+
+    initElements() {
+      this.phaseIndicator = document.getElementById('phaseIndicator');
+      this.timerDisplay = document.getElementById('timerDisplay');
+      this.exerciseName = document.getElementById('exerciseName');
+      this.progressFill = document.getElementById('progressFill');
+      this.startBtn = document.getElementById('startBtn');
+      this.pauseBtn = document.getElementById('pauseBtn');
+      this.resetBtn = document.getElementById('resetBtn');
+      this.workoutList = document.getElementById('workoutList');
+      this.backBtn = document.getElementById('backBtn');
+      this.nextBtn = document.getElementById('nextBtn');
+
+    }
+
+    setupEventListeners() {
+      this.startBtn.addEventListener('click', () => this.startWorkout());
+      this.pauseBtn.addEventListener('click', () => this.togglePause());
+      this.resetBtn.addEventListener('click', () => this.resetWorkout());
+      this.backBtn.addEventListener('click', () => this.previousExercise());
+      this.nextBtn.addEventListener('click', () => this.skipToNextExercise());
+
+    }
+
+    renderWorkoutList() {
+      this.workoutList.innerHTML = this.exercises.map((exercise, index) =>
+              `<div class="exercise-item" id="exercise-${index}">
+                        ${index + 1}. ${exercise} - 1 min
+                    </div>`
+      ).join('');
+    }
+
+    updateWorkoutListDisplay() {
+      this.exercises.forEach((_, index) => {
+        const element = document.getElementById(`exercise-${index}`);
+        element.className = 'exercise-item';
+
+        if (index < this.currentExercise) {
+          element.classList.add('completed');
+        } else if (index === this.currentExercise && this.currentPhase === 'exercise') {
+          element.classList.add('current');
         }
       });
     }
 
-    function startRest() {
-      mode = "rest";
-      remainingTime = REST;
-      tick("Rest", startExercise);
+    startWorkout() {
+      if (this.audioContext && this.audioContext.state === 'suspended') {
+        this.audioContext.resume();
+      }
+
+      this.currentPhase = 'countdown';
+      this.timeLeft = 10;
+      this.totalTime = 10;
+      this.startBtn.disabled = true;
+      this.pauseBtn.disabled = false;
+      this.startTimer();
     }
 
-    function resumeCurrentPhase() {
-      if (mode === "exercise") {
-        tick(exercises[currentIndex], () => {
-          currentIndex++;
-          currentIndex >= exercises.length ? endWorkout() : startRest();
-        });
-      } else if (mode === "rest") {
-        tick("Rest", startExercise);
+    startTimer() {
+      if (this.timer) clearInterval(this.timer);
+
+      this.timer = setInterval(() => {
+        if (!this.isPaused) {
+          this.timeLeft--;
+          this.updateDisplay();
+
+          // Warning beeps at 3, 2, 1 seconds
+          if (this.timeLeft <= 3 && this.timeLeft > 0) {
+            this.playWarningBeeps();
+            this.timerDisplay.classList.add('warning');
+          } else {
+            this.timerDisplay.classList.remove('warning');
+          }
+
+          if (this.timeLeft <= 0) {
+            this.nextPhase();
+          }
+        }
+      }, 1000);
+    }
+
+    nextPhase() {
+      switch (this.currentPhase) {
+        case 'countdown':
+          this.startExercise();
+          break;
+        case 'exercise':
+          if (this.currentExercise < this.exercises.length - 1) {
+            this.startRest();
+          } else {
+            this.finishWorkout();
+          }
+          break;
+        case 'rest':
+          this.currentExercise++;
+          this.startExercise();
+          break;
       }
     }
 
-    function jumpToPrev() {
-      if (currentIndex > 0) {
-        clearInterval(timer);
-        paused = false;
-        currentIndex--;
-        mode = "exercise";
-        remainingTime = DURATION;
-        startPauseBtn.textContent = "⏸ Pause";
-        startExercise();
-      }
+    startExercise() {
+      this.currentPhase = 'exercise';
+      this.timeLeft = 60;
+      this.totalTime = 60;
+      this.playStartExerciseSound(); // 👈 Add this line
+      this.updateDisplay();
+
     }
 
-    function jumpToNext() {
-      clearInterval(timer);
-      paused = false;
-      if (currentIndex < exercises.length - 1) {
-        currentIndex++;
-        mode = "exercise";
-        remainingTime = DURATION;
-        startPauseBtn.textContent = "⏸ Pause";
-        startExercise();
-      } else {
-        endWorkout();
-      }
+    startRest() {
+      this.currentPhase = 'rest';
+      this.timeLeft = 30;
+      this.totalTime = 30;
+      this.updateDisplay();
     }
 
-    function endWorkout() {
-      inProgress = false;
-      paused = false;
-      clearInterval(timer);
-      updateDisplay("Workout complete!", 0);
-      startPauseBtn.textContent = "🔁 Restart";
-      startPauseBtn.onclick = () => {
-        startPauseBtn.onclick = toggleWorkout;
-        toggleWorkout();
-      };
+    finishWorkout() {
+      this.currentPhase = 'finished';
+      this.playFinishSound();
+      clearInterval(this.timer);
+      this.startBtn.disabled = false;
+      this.pauseBtn.disabled = true;
+      this.updateDisplay();
     }
-  </script>
+
+    togglePause() {
+      this.isPaused = !this.isPaused;
+      this.pauseBtn.textContent = this.isPaused ? 'Resume' : 'Pause';
+    }
+
+    resetWorkout() {
+      clearInterval(this.timer);
+      this.currentPhase = 'ready';
+      this.currentExercise = 0;
+      this.timeLeft = 0;
+      this.isPaused = false;
+      this.startBtn.disabled = false;
+      this.pauseBtn.disabled = true;
+      this.pauseBtn.textContent = 'Pause';
+      this.updateDisplay();
+    }
+
+    updateDisplay() {
+      // Update timer display
+      const minutes = Math.floor(this.timeLeft / 60);
+      const seconds = this.timeLeft % 60;
+      this.timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+      // Update phase and exercise name
+      switch (this.currentPhase) {
+        case 'ready':
+          this.phaseIndicator.textContent = 'Ready to Start';
+          this.exerciseName.textContent = 'Get Ready!';
+          this.progressFill.style.width = '0%';
+          break;
+        case 'countdown':
+          this.phaseIndicator.textContent = 'Starting In...';
+          this.exerciseName.textContent = 'Get Ready!';
+          this.progressFill.style.width = `${((this.totalTime - this.timeLeft) / this.totalTime) * 100}%`;
+          break;
+        case 'exercise':
+          this.phaseIndicator.textContent = `Exercise ${this.currentExercise + 1}/${this.exercises.length}`;
+          this.exerciseName.textContent = this.exercises[this.currentExercise];
+          this.progressFill.style.width = `${((this.totalTime - this.timeLeft) / this.totalTime) * 100}%`;
+          break;
+        case 'rest':
+          this.phaseIndicator.textContent = 'Rest Time';
+          this.exerciseName.textContent = 'Take a break!';
+          this.progressFill.style.width = `${((this.totalTime - this.timeLeft) / this.totalTime) * 100}%`;
+          break;
+        case 'finished':
+          this.phaseIndicator.textContent = 'Workout Complete!';
+          this.exerciseName.textContent = 'Great job! 🎉';
+          this.timerDisplay.textContent = 'DONE';
+          this.progressFill.style.width = '100%';
+          break;
+      }
+
+      this.updateWorkoutListDisplay();
+    }
+  }
+
+  // Initialize the workout timer when the page loads
+  document.addEventListener('DOMContentLoaded', () => {
+    new WorkoutTimer();
+  });
+</script>
 </body>
 </html>
-
