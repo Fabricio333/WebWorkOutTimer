@@ -102,6 +102,14 @@
       gap: 15px;
     }
 
+    .routine-controls {
+      margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+    }
+
     button {
       background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
       border: none;
@@ -114,6 +122,23 @@
       cursor: pointer;
       transition: all 0.3s ease;
       box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+    }
+
+    .routine-controls select {
+      background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+      border: none;
+      color: white;
+      padding: 15px 30px;
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+    }
+
+    .routine-controls select:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6);
     }
 
     button:hover {
@@ -203,6 +228,15 @@
 
 
   <div class="workout-list" id="workoutList"></div>
+
+  <div class="routine-controls">
+    <button id="editRoutineBtn">✏️ Edit Routine</button>
+    <button id="saveRoutineBtn">💾 Save Routine</button>
+    <select id="loadRoutineSelect">
+      <option value="">Load Routine</option>
+    </select>
+    <button id="loadRoutineBtn">📂 Load</button>
+  </div>
 </div>
 
 <script>
@@ -271,6 +305,7 @@
       this.initElements();
       this.setupEventListeners();
       this.renderWorkoutList();
+      this.populateSavedRoutines();
       this.updateDisplay();
     }
 
@@ -324,6 +359,10 @@
       this.workoutList = document.getElementById('workoutList');
       this.backBtn = document.getElementById('backBtn');
       this.nextBtn = document.getElementById('nextBtn');
+      this.editBtn = document.getElementById('editRoutineBtn');
+      this.saveBtn = document.getElementById('saveRoutineBtn');
+      this.loadSelect = document.getElementById('loadRoutineSelect');
+      this.loadBtn = document.getElementById('loadRoutineBtn');
 
     }
 
@@ -333,6 +372,14 @@
       this.resetBtn.addEventListener('click', () => this.resetWorkout());
       this.backBtn.addEventListener('click', () => this.goBack());
       this.nextBtn.addEventListener('click', () => this.skipToNextExercise());
+      this.editBtn.addEventListener('click', () => this.editRoutine());
+      this.saveBtn.addEventListener('click', () => this.saveRoutine());
+      this.loadBtn.addEventListener('click', () => {
+        const name = this.loadSelect.value;
+        if (name) {
+          this.loadRoutine(name);
+        }
+      });
 
     }
 
@@ -342,6 +389,58 @@
                         ${index + 1}. ${exercise} - 1 min
                     </div>`
       ).join('');
+    }
+
+    populateSavedRoutines() {
+      this.loadSelect.innerHTML = '<option value="">Load Routine</option>';
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        try {
+          const value = JSON.parse(localStorage.getItem(key));
+          if (Array.isArray(value)) {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = key;
+            this.loadSelect.appendChild(option);
+          }
+        } catch (e) {}
+      }
+    }
+
+    editRoutine() {
+      const current = this.exercises.join('\n');
+      const input = prompt('Edit routine (one exercise per line):', current);
+      if (input !== null) {
+        const arr = input.split('\n').map(e => e.trim()).filter(e => e);
+        if (arr.length) {
+          this.exercises = arr;
+          this.renderWorkoutList();
+          this.resetWorkout();
+        }
+      }
+    }
+
+    saveRoutine() {
+      const name = prompt('Enter a name for this routine:');
+      if (name) {
+        localStorage.setItem(name, JSON.stringify(this.exercises));
+        this.populateSavedRoutines();
+        alert('Routine saved!');
+      }
+    }
+
+    loadRoutine(name) {
+      const data = localStorage.getItem(name);
+      if (data) {
+        try {
+          const arr = JSON.parse(data);
+          if (Array.isArray(arr) && arr.length) {
+            this.exercises = arr;
+            this.renderWorkoutList();
+            this.resetWorkout();
+          }
+        } catch (e) {}
+      }
     }
 
     updateWorkoutListDisplay() {
