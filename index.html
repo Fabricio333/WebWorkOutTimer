@@ -89,6 +89,10 @@
 
     .controls {
       margin-top: 30px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
     }
 
     button {
@@ -96,7 +100,7 @@
       border: none;
       color: white;
       padding: 15px 30px;
-      margin: 0 10px;
+      margin: 0;
       border-radius: 50px;
       font-size: 1.1rem;
       font-weight: 600;
@@ -158,6 +162,14 @@
 
       h1 {
         font-size: 2rem;
+      }
+
+      .controls {
+        flex-direction: column;
+      }
+
+      .controls button {
+        width: 100%;
       }
     }
   </style>
