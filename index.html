@@ -193,10 +193,25 @@
       setTimeout(() => this.playBeep(1200, 300), 300);
       setTimeout(() => this.playBeep(1400, 500), 600);
     }
-    previousExercise() {
-      if (this.currentExercise > 0) {
-        this.currentExercise--;
-        this.startExercise();
+    goBack() {
+      switch (this.currentPhase) {
+        case 'exercise':
+          if (this.currentExercise > 0) {
+            this.currentExercise--;
+            this.startRest();
+          } else {
+            this.currentPhase = 'countdown';
+            this.timeLeft = 10;
+            this.totalTime = 10;
+            this.updateDisplay();
+          }
+          break;
+        case 'rest':
+          this.startExercise();
+          break;
+        case 'countdown':
+          this.resetWorkout();
+          break;
       }
     }
 
@@ -297,7 +312,7 @@
       this.startBtn.addEventListener('click', () => this.startWorkout());
       this.pauseBtn.addEventListener('click', () => this.togglePause());
       this.resetBtn.addEventListener('click', () => this.resetWorkout());
-      this.backBtn.addEventListener('click', () => this.previousExercise());
+      this.backBtn.addEventListener('click', () => this.goBack());
       this.nextBtn.addEventListener('click', () => this.skipToNextExercise());
 
     }
