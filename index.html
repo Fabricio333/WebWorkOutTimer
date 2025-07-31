@@ -102,6 +102,14 @@
       gap: 15px;
     }
 
+    .routine-controls {
+      margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+    }
+
     button {
       background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
       border: none;
@@ -114,6 +122,23 @@
       cursor: pointer;
       transition: all 0.3s ease;
       box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+    }
+
+    .routine-controls select {
+      background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
+      border: none;
+      color: white;
+      padding: 15px 30px;
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
+    }
+
+    .routine-controls select:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6);
     }
 
     button:hover {
@@ -156,6 +181,77 @@
     .exercise-item.completed {
       opacity: 0.5;
       text-decoration: line-through;
+    }
+
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .modal.hidden {
+      display: none;
+    }
+
+    .modal-content {
+      background: rgba(255, 255, 255, 0.95);
+      color: #333;
+      padding: 20px;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 400px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-content h2 {
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    #routineEditor .routine-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    #routineEditor .routine-item input {
+      flex: 1;
+      padding: 8px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    #routineEditor .routine-item button {
+      background: #e74c3c;
+      padding: 8px 12px;
+      border-radius: 5px;
+    }
+
+    .add-exercise {
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .modal-content input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
     }
 
     @media (max-width: 600px) {
@@ -203,6 +299,26 @@
 
 
   <div class="workout-list" id="workoutList"></div>
+
+  <div class="routine-controls">
+    <button id="editRoutineBtn">✏️ Edit Routine</button>
+    <select id="loadRoutineSelect">
+      <option value="">Load Routine</option>
+    </select>
+  </div>
+</div>
+
+<div id="routineModal" class="modal hidden">
+  <div class="modal-content">
+    <h2>Edit Routine</h2>
+    <div id="routineEditor"></div>
+    <button id="addExerciseBtn" class="add-exercise">➕ Add Exercise</button>
+    <input id="routineNameInput" type="text" placeholder="Routine name">
+    <div class="modal-actions">
+      <button id="saveRoutineModalBtn">💾 Save</button>
+      <button id="cancelRoutineModalBtn">✖ Cancel</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -257,6 +373,8 @@
         'Plank'
       ];
 
+      this.currentRoutineName = '';
+
       this.currentPhase = 'ready'; // ready, countdown, exercise, rest, finished
       this.currentExercise = 0;
       this.timeLeft = 0;
@@ -271,6 +389,7 @@
       this.initElements();
       this.setupEventListeners();
       this.renderWorkoutList();
+      this.populateSavedRoutines();
       this.updateDisplay();
     }
 
@@ -324,6 +443,14 @@
       this.workoutList = document.getElementById('workoutList');
       this.backBtn = document.getElementById('backBtn');
       this.nextBtn = document.getElementById('nextBtn');
+      this.editBtn = document.getElementById('editRoutineBtn');
+      this.loadSelect = document.getElementById('loadRoutineSelect');
+      this.routineModal = document.getElementById('routineModal');
+      this.routineEditor = document.getElementById('routineEditor');
+      this.addExerciseBtn = document.getElementById('addExerciseBtn');
+      this.saveRoutineModalBtn = document.getElementById('saveRoutineModalBtn');
+      this.cancelRoutineModalBtn = document.getElementById('cancelRoutineModalBtn');
+      this.routineNameInput = document.getElementById('routineNameInput');
 
     }
 
@@ -333,6 +460,16 @@
       this.resetBtn.addEventListener('click', () => this.resetWorkout());
       this.backBtn.addEventListener('click', () => this.goBack());
       this.nextBtn.addEventListener('click', () => this.skipToNextExercise());
+      this.editBtn.addEventListener('click', () => this.openRoutineModal());
+      this.addExerciseBtn.addEventListener('click', () => this.addRoutineField());
+      this.saveRoutineModalBtn.addEventListener('click', () => this.saveRoutineFromModal());
+      this.cancelRoutineModalBtn.addEventListener('click', () => this.closeRoutineModal());
+      this.loadSelect.addEventListener('change', () => {
+        const name = this.loadSelect.value;
+        if (name) {
+          this.loadRoutine(name);
+        }
+      });
 
     }
 
@@ -342,6 +479,80 @@
                         ${index + 1}. ${exercise} - 1 min
                     </div>`
       ).join('');
+    }
+
+    populateSavedRoutines() {
+      this.loadSelect.innerHTML = '<option value="">Load Routine</option>';
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        try {
+          const value = JSON.parse(localStorage.getItem(key));
+          if (Array.isArray(value)) {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = key;
+            this.loadSelect.appendChild(option);
+          }
+        } catch (e) {}
+      }
+    }
+
+    openRoutineModal() {
+      this.routineEditor.innerHTML = '';
+      this.exercises.forEach(ex => this.addRoutineField(ex));
+      this.routineNameInput.value = this.currentRoutineName || '';
+      this.routineModal.classList.remove('hidden');
+    }
+
+    closeRoutineModal() {
+      this.routineModal.classList.add('hidden');
+    }
+
+    addRoutineField(value = '') {
+      const div = document.createElement('div');
+      div.className = 'routine-item';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = value;
+      const remove = document.createElement('button');
+      remove.textContent = '✖';
+      remove.addEventListener('click', () => div.remove());
+      div.appendChild(input);
+      div.appendChild(remove);
+      this.routineEditor.appendChild(div);
+    }
+
+    saveRoutineFromModal() {
+      const name = this.routineNameInput.value.trim();
+      const items = Array.from(this.routineEditor.querySelectorAll('input'))
+        .map(i => i.value.trim())
+        .filter(Boolean);
+      if (!name || items.length === 0) {
+        alert('Please provide a name and at least one exercise.');
+        return;
+      }
+      this.exercises = items;
+      this.currentRoutineName = name;
+      localStorage.setItem(name, JSON.stringify(items));
+      this.renderWorkoutList();
+      this.resetWorkout();
+      this.populateSavedRoutines();
+      this.closeRoutineModal();
+    }
+
+    loadRoutine(name) {
+      const data = localStorage.getItem(name);
+      if (data) {
+        try {
+          const arr = JSON.parse(data);
+          if (Array.isArray(arr) && arr.length) {
+            this.exercises = arr;
+            this.currentRoutineName = name;
+            this.renderWorkoutList();
+            this.resetWorkout();
+          }
+        } catch (e) {}
+      }
     }
 
     updateWorkoutListDisplay() {
