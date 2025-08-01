@@ -113,10 +113,15 @@
     .drag-handle {
       cursor: grab;
       font-size: 1.2rem;
+      touch-action: none;
     }
 
     .drag-handle:active {
       cursor: grabbing;
+    }
+
+    .routine-item.dragging {
+      opacity: 0.5;
     }
 
     #loadList {
@@ -323,16 +328,15 @@
   </div>
 </div>
 
-<div id="loadModal" class="modal hidden">
-  <div class="modal-content">
-    <h2>Load Routine</h2>
-    <div id="loadList"></div>
-    <div class="modal-actions">
-      <button id="closeLoadModalBtn">✖ Close</button>
+  <div id="loadModal" class="modal hidden">
+    <div class="modal-content">
+      <h2>Load Routine</h2>
+      <div id="loadList"></div>
+      <div class="modal-actions">
+        <button id="closeLoadModalBtn">✖ Close</button>
+      </div>
     </div>
   </div>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
   class WorkoutTimer {
     playStartExerciseSound() {
@@ -394,14 +398,13 @@
       this.timer = null;
       this.isPaused = false;
 
-      this.sortable = null;
-
       // Audio contexts for different sounds
       this.audioContext = null;
       this.initAudio();
 
       this.initElements();
       this.setupEventListeners();
+      this.enableDragAndDrop();
       this.renderWorkoutList();
       this.updateDisplay();
     }
@@ -497,13 +500,6 @@
       this.exercises.forEach(ex => this.addRoutineField(ex));
       this.routineNameInput.value = this.currentRoutineName || '';
       this.routineModal.classList.remove('hidden');
-      if (this.sortable) {
-        this.sortable.destroy();
-      }
-      this.sortable = new Sortable(this.routineEditor, {
-        animation: 150,
-        handle: '.drag-handle'
-      });
     }
 
     closeRoutineModal() {
@@ -550,6 +546,51 @@
       div.appendChild(input);
       div.appendChild(remove);
       this.routineEditor.appendChild(div);
+    }
+
+    enableDragAndDrop() {
+      const container = this.routineEditor;
+      let dragItem = null;
+
+      container.addEventListener('pointerdown', e => {
+        const handle = e.target.closest('.drag-handle');
+        if (!handle) return;
+        dragItem = handle.parentElement;
+        dragItem.classList.add('dragging');
+        e.preventDefault();
+      });
+
+      document.addEventListener('pointermove', e => {
+        if (!dragItem) return;
+        const after = this.getDragAfterElement(container, e.clientY);
+        if (after == null) {
+          container.appendChild(dragItem);
+        } else {
+          container.insertBefore(dragItem, after);
+        }
+      });
+
+      const endDrag = () => {
+        if (!dragItem) return;
+        dragItem.classList.remove('dragging');
+        dragItem = null;
+      };
+
+      document.addEventListener('pointerup', endDrag);
+      document.addEventListener('pointercancel', endDrag);
+    }
+
+    getDragAfterElement(container, y) {
+      const els = [...container.querySelectorAll('.routine-item:not(.dragging)')];
+      return els.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+          return { offset, element: child };
+        } else {
+          return closest;
+        }
+      }, { offset: -Infinity, element: null }).element;
     }
 
     saveRoutineFromModal() {
