@@ -312,6 +312,7 @@
   <div class="routine-controls">
     <button id="editRoutineBtn">✏️ Edit Routine</button>
     <button id="loadRoutineBtn">📁 Load Routine</button>
+    <button id="deleteRoutineBtn">🗑️ Delete Routines</button>
   </div>
 </div>
 
@@ -461,6 +462,7 @@
       this.nextBtn = document.getElementById('nextBtn');
       this.editBtn = document.getElementById('editRoutineBtn');
       this.loadBtn = document.getElementById('loadRoutineBtn');
+      this.deleteBtn = document.getElementById('deleteRoutineBtn');
       this.loadModal = document.getElementById('loadModal');
       this.loadList = document.getElementById('loadList');
       this.closeLoadModalBtn = document.getElementById('closeLoadModalBtn');
@@ -485,6 +487,7 @@
       this.cancelRoutineModalBtn.addEventListener('click', () => this.closeRoutineModal());
       this.loadBtn.addEventListener('click', () => this.openLoadModal());
       this.closeLoadModalBtn.addEventListener('click', () => this.closeLoadModal());
+      this.deleteBtn.addEventListener('click', () => this.deleteAllRoutines());
     }
 
     renderWorkoutList() {
@@ -623,6 +626,20 @@
           }
         } catch (e) {}
       }
+    }
+
+    deleteAllRoutines() {
+      if (!confirm('Delete all saved routines?')) return;
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        try {
+          const value = JSON.parse(localStorage.getItem(key));
+          if (Array.isArray(value)) keys.push(key);
+        } catch (e) {}
+      }
+      keys.forEach(k => localStorage.removeItem(k));
+      alert('All routines deleted.');
     }
 
     updateWorkoutListDisplay() {
