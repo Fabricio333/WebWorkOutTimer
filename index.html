@@ -533,17 +533,18 @@
       this.loadModal.classList.add('hidden');
     }
 
-    addRoutineField(value = '') {
-      const div = document.createElement('div');
-      div.className = 'routine-item';
-      const handle = document.createElement('span');
-      handle.className = 'drag-handle';
-      handle.textContent = '☰';
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.value = value;
-      const remove = document.createElement('button');
-      remove.textContent = '✖';
+      addRoutineField(value = '') {
+        const div = document.createElement('div');
+        div.className = 'routine-item';
+        const handle = document.createElement('span');
+        handle.className = 'drag-handle';
+        handle.textContent = '☰';
+        handle.draggable = true;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.value = value;
+        const remove = document.createElement('button');
+        remove.textContent = '✖';
       remove.addEventListener('click', () => div.remove());
       div.appendChild(handle);
       div.appendChild(input);
@@ -555,15 +556,18 @@
       const container = this.routineEditor;
       let dragItem = null;
 
-      container.addEventListener('pointerdown', e => {
+      container.addEventListener('dragstart', e => {
         const handle = e.target.closest('.drag-handle');
         if (!handle) return;
         dragItem = handle.parentElement;
-        dragItem.classList.add('dragging');
-        e.preventDefault();
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', '');
+        e.dataTransfer.setDragImage(dragItem, 0, 0);
+        setTimeout(() => dragItem.classList.add('dragging'), 0);
       });
 
-      document.addEventListener('pointermove', e => {
+      container.addEventListener('dragover', e => {
+        e.preventDefault();
         if (!dragItem) return;
         const after = this.getDragAfterElement(container, e.clientY);
         if (after == null) {
@@ -573,14 +577,13 @@
         }
       });
 
-      const endDrag = () => {
+      container.addEventListener('drop', e => e.preventDefault());
+
+      container.addEventListener('dragend', () => {
         if (!dragItem) return;
         dragItem.classList.remove('dragging');
         dragItem = null;
-      };
-
-      document.addEventListener('pointerup', endDrag);
-      document.addEventListener('pointercancel', endDrag);
+      });
     }
 
     getDragAfterElement(container, y) {
