@@ -110,6 +110,26 @@
       gap: 15px;
     }
 
+    .drag-handle {
+      cursor: grab;
+      font-size: 1.2rem;
+    }
+
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+
+    #loadList {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    #loadList button {
+      width: 100%;
+    }
+
     button {
       background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
       border: none;
@@ -124,22 +144,6 @@
       box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
     }
 
-    .routine-controls select {
-      background: linear-gradient(45deg, #4facfe 0%, #00f2fe 100%);
-      border: none;
-      color: white;
-      padding: 15px 30px;
-      border-radius: 50px;
-      font-size: 1.1rem;
-      font-weight: 600;
-      cursor: pointer;
-      box-shadow: 0 4px 15px rgba(79, 172, 254, 0.4);
-    }
-
-    .routine-controls select:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 20px rgba(79, 172, 254, 0.6);
-    }
 
     button:hover {
       transform: translateY(-2px);
@@ -302,9 +306,7 @@
 
   <div class="routine-controls">
     <button id="editRoutineBtn">✏️ Edit Routine</button>
-    <select id="loadRoutineSelect">
-      <option value="">Load Routine</option>
-    </select>
+    <button id="loadRoutineBtn">📁 Load Routine</button>
   </div>
 </div>
 
@@ -321,6 +323,16 @@
   </div>
 </div>
 
+<div id="loadModal" class="modal hidden">
+  <div class="modal-content">
+    <h2>Load Routine</h2>
+    <div id="loadList"></div>
+    <div class="modal-actions">
+      <button id="closeLoadModalBtn">✖ Close</button>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
   class WorkoutTimer {
     playStartExerciseSound() {
@@ -373,7 +385,7 @@
         'Plank'
       ];
 
-      this.currentRoutineName = '';
+      this.currentRoutineName = 'Default';
 
       this.currentPhase = 'ready'; // ready, countdown, exercise, rest, finished
       this.currentExercise = 0;
@@ -382,6 +394,8 @@
       this.timer = null;
       this.isPaused = false;
 
+      this.sortable = null;
+
       // Audio contexts for different sounds
       this.audioContext = null;
       this.initAudio();
@@ -389,7 +403,6 @@
       this.initElements();
       this.setupEventListeners();
       this.renderWorkoutList();
-      this.populateSavedRoutines();
       this.updateDisplay();
     }
 
@@ -444,7 +457,10 @@
       this.backBtn = document.getElementById('backBtn');
       this.nextBtn = document.getElementById('nextBtn');
       this.editBtn = document.getElementById('editRoutineBtn');
-      this.loadSelect = document.getElementById('loadRoutineSelect');
+      this.loadBtn = document.getElementById('loadRoutineBtn');
+      this.loadModal = document.getElementById('loadModal');
+      this.loadList = document.getElementById('loadList');
+      this.closeLoadModalBtn = document.getElementById('closeLoadModalBtn');
       this.routineModal = document.getElementById('routineModal');
       this.routineEditor = document.getElementById('routineEditor');
       this.addExerciseBtn = document.getElementById('addExerciseBtn');
@@ -464,13 +480,8 @@
       this.addExerciseBtn.addEventListener('click', () => this.addRoutineField());
       this.saveRoutineModalBtn.addEventListener('click', () => this.saveRoutineFromModal());
       this.cancelRoutineModalBtn.addEventListener('click', () => this.closeRoutineModal());
-      this.loadSelect.addEventListener('change', () => {
-        const name = this.loadSelect.value;
-        if (name) {
-          this.loadRoutine(name);
-        }
-      });
-
+      this.loadBtn.addEventListener('click', () => this.openLoadModal());
+      this.closeLoadModalBtn.addEventListener('click', () => this.closeLoadModal());
     }
 
     renderWorkoutList() {
@@ -481,42 +492,61 @@
       ).join('');
     }
 
-    populateSavedRoutines() {
-      this.loadSelect.innerHTML = '<option value="">Load Routine</option>';
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        try {
-          const value = JSON.parse(localStorage.getItem(key));
-          if (Array.isArray(value)) {
-            const option = document.createElement('option');
-            option.value = key;
-            option.textContent = key;
-            this.loadSelect.appendChild(option);
-          }
-        } catch (e) {}
-      }
-    }
-
     openRoutineModal() {
       this.routineEditor.innerHTML = '';
       this.exercises.forEach(ex => this.addRoutineField(ex));
       this.routineNameInput.value = this.currentRoutineName || '';
       this.routineModal.classList.remove('hidden');
+      if (this.sortable) {
+        this.sortable.destroy();
+      }
+      this.sortable = new Sortable(this.routineEditor, {
+        animation: 150,
+        handle: '.drag-handle'
+      });
     }
 
     closeRoutineModal() {
       this.routineModal.classList.add('hidden');
     }
 
+    openLoadModal() {
+      this.loadList.innerHTML = '';
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        try {
+          const value = JSON.parse(localStorage.getItem(key));
+          if (Array.isArray(value)) {
+            const btn = document.createElement('button');
+            btn.textContent = key;
+            btn.addEventListener('click', () => {
+              this.loadRoutine(key);
+              this.closeLoadModal();
+            });
+            this.loadList.appendChild(btn);
+          }
+        } catch (e) {}
+      }
+      this.loadModal.classList.remove('hidden');
+    }
+
+    closeLoadModal() {
+      this.loadModal.classList.add('hidden');
+    }
+
     addRoutineField(value = '') {
       const div = document.createElement('div');
       div.className = 'routine-item';
+      const handle = document.createElement('span');
+      handle.className = 'drag-handle';
+      handle.textContent = '☰';
       const input = document.createElement('input');
       input.type = 'text';
       input.value = value;
       const remove = document.createElement('button');
       remove.textContent = '✖';
       remove.addEventListener('click', () => div.remove());
+      div.appendChild(handle);
       div.appendChild(input);
       div.appendChild(remove);
       this.routineEditor.appendChild(div);
@@ -536,7 +566,6 @@
       localStorage.setItem(name, JSON.stringify(items));
       this.renderWorkoutList();
       this.resetWorkout();
-      this.populateSavedRoutines();
       this.closeRoutineModal();
     }
 
